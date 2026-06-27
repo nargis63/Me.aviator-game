@@ -3,174 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>असली लाइव एविएटर गेम</title>
-    <!-- Socket.io क्लाइंट लाइब्रेरी -->
+    <title>Aviator Official Game</title>
     <script src="https://socket.io"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-        body { background: #000; color: #fff; padding: 10px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', sans-serif; user-select: none; }
+        body { background: #101112; color: #fff; padding: 8px; }
         
-        /* टॉप बार और पुराना इतिहास */
-        .top-nav { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #1b1c21; border-radius: 8px; margin-bottom: 10px; }
-        .logo-red { color: #e50914; font-weight: bold; font-size: 18px; }
-        .bal { color: #22c55e; font-weight: bold; background: #262930; padding: 5px 12px; border-radius: 15px; }
-        
-        .history-bar { display: flex; gap: 6px; overflow-x: auto; padding: 5px 0; margin-bottom: 10px; }
-        .history-pearl { background: #262930; color: #9ca3af; font-size: 11px; padding: 3px 8px; border-radius: 10px; border: 1px solid #374151; font-weight: bold; min-width: 45px; text-align: center; }
-        .pearl-high { color: #c084fc; border-color: #a855f7; }
+        /* कसीनो हेडर */
+        .casino-header { display: flex; justify-content: space-between; align-items: center; background: #1b1c1d; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; border-bottom: 2px solid #cb011a; }
+        .brand { color: #cb011a; font-weight: 900; font-size: 20px; font-style: italic; }
+        .wallet-box { background: #2c2d30; color: #2de35d; font-weight: bold; padding: 6px 14px; border-radius: 20px; font-size: 14px; border: 1px solid #3d3e42; }
 
-        /* मुख्य लाइव एविएटर बोर्ड */
-        .aviator-board { background: radial-gradient(circle, #1c1d24 0%, #0c0d12 100%); height: 260px; border-radius: 12px; border: 1px solid #1f2937; position: relative; overflow: hidden; margin-bottom: 15px; }
-        .main-multiplier { position: absolute; width: 100%; text-align: center; top: 80px; font-size: 55px; font-weight: bold; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.2); z-index: 5; }
+        /* मुख्य लाइव एविएटर स्क्रीन */
+        .main-board { background: #000; height: 220px; border-radius: 12px; border: 1px solid #2c2d30; position: relative; overflow: hidden; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; }
+        .multiplier-text { font-size: 55px; font-weight: 900; color: #fff; z-index: 5; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        .plane-animator { position: absolute; bottom: 20px; left: 20px; font-size: 45px; display: none; transition: transform 0.1s linear; z-index: 4; filter: drop-shadow(0 0 10px #cb011a); }
+
+        /* बेटिंग बॉक्स - डबल पैनल (असली गेम जैसा) */
+        .betting-container { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        @media(min-width: 600px) { .betting-container { grid-template-columns: 1fr 1fr; } }
         
-        /* ग्राफिक्स और हवाई जहाज एनीमेशन */
-        .plane-box { position: absolute; bottom: 30px; left: 30px; width: 50px; height: 40px; display: none; transition: transform 0.1s linear; z-index: 4; }
-        .red-plane { width: 100%; filter: drop-shadow(0 0 8px #e50914); }
-        .graph-line { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; stroke: #e50914; stroke-width: 3; fill: none; display: none; }
+        .bet-card { background: #1b1c1d; border: 1px solid #2c2d30; border-radius: 12px; padding: 10px; width: 100%; }
+        .input-row { display: flex; width: 100%; gap: 6px; margin-bottom: 8px; }
+        .number-selector { flex: 1; display: flex; background: #101112; border: 1px solid #3d3e42; border-radius: 6px; overflow: hidden; }
+        .num-btn { background: none; border: none; color: #8a8b8c; width: 35px; font-size: 20px; cursor: pointer; }
+        .num-btn:active { background: #2c2d30; }
+        .main-input { flex: 1; background: none; border: none; color: #fff; text-align: center; font-size: 18px; font-weight: bold; width: 50px; }
         
-        /* बेटिंग बॉक्स (कसीनो डिजाइन) */
-        .bet-box { background: #131418; border: 1px solid #1f2937; padding: 15px; border-radius: 12px; display: flex; gap: 10px; flex-direction: column; align-items: center; }
-        .bet-input-section { display: flex; width: 100%; gap: 10px; align-items: center; }
-        .bet-input-section input { flex: 1; padding: 12px; font-size: 20px; text-align: center; background: #000; border: 1px solid #374151; color: #fff; border-radius: 8px; font-weight: bold; }
-        .bet-button { width: 100%; padding: 15px; font-size: 20px; font-weight: bold; color: #fff; border: none; border-radius: 8px; cursor: pointer; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
-        .state-bet { background: #22c55e; box-shadow: 0 4px 15px rgba(34,197,94,0.4); }
-        .state-cashout { background: #d97706; box-shadow: 0 4px 15px rgba(217,119,6,0.4); }
-        .state-waiting { background: #4b5563; cursor: not-allowed; }
+        /* हरा बेट बटन */
+        .action-green-btn { width: 100%; padding: 14px; font-size: 18px; font-weight: 900; color: #fff; border: none; border-radius: 8px; cursor: pointer; text-transform: uppercase; background: #2de35d; box-shadow: 0 4px 15px rgba(45,227,93,0.3); }
+        .state-active-bet { background: #2de35d; }
+        .state-cashout-orange { background: #d97706; box-shadow: 0 4px 15px rgba(217,119,6,0.4); }
+        .state-wait { background: #4b5563; color: #9ca3af; cursor: not-allowed; box-shadow: none; }
+
+        /* ऑटो कैश आउट सेक्शन */
+        .auto-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 6px; border-top: 1px solid #2c2d30; font-size: 12px; color: #a0a1a2; }
+        .auto-toggle { display: flex; align-items: center; gap: 4px; }
+        .auto-input { width: 55px; padding: 3px; background: #101112; border: 1px solid #3d3e42; color: #fff; border-radius: 4px; text-align: center; font-weight: bold; font-size: 12px; }
     </style>
 </head>
 <body>
 
-    <div class="top-nav">
-        <span class="logo-red">✈ Aviator</span>
-        <div class="bal">₹<span id="wallet">5000.00</span></div>
+    <div class="casino-header">
+        <span class="brand">Aviator</span>
+        <div class="wallet-box">₹<span id="total-wallet">5000.00</span></div>
     </div>
 
-    <!-- पुराना इतिहास -->
-    <div class="history-bar" id="history">
-        <span class="history-pearl">1.34x</span>
-        <span class="history-pearl pearl-high">12.5x</span>
-        <span class="history-pearl">2.10x</span>
-        <span class="history-pearl">1.05x</span>
+    <!-- लाइव बोर्ड -->
+    <div class="main-board">
+        <div class="multiplier-text" id="mult-screen">वेटिंग...</div>
+        <div class="plane-animator" id="red-plane-wrapper">✈️</div>
     </div>
 
-    <!-- लाइव मुख्य बोर्ड -->
-    <div class="aviator-board">
-        <div class="main-multiplier" id="display-mult">वेटिंग...</div>
-        <div class="plane-box" id="plane-wrapper">
-            <!-- सुंदर लाल हवाई जहाज इमोटिकॉन -->
-            <span style="font-size: 40px; display: block; transform: scaleX(-1);">✈️</span>
+    <!-- डबल बेटिंग बोर्ड (असली स्प्राईब जैसा) -->
+    <div class="betting-container">
+        
+        <!-- पहला बेट पैनल -->
+        <div class="bet-card">
+            <div class="input-row">
+                <div class="number-selector">
+                    <button class="num-btn" onclick="adjustValue('amt-1', -10)">-</button>
+                    <input type="number" id="amt-1" class="main-input" value="100">
+                    <button class="num-btn" onclick="adjustValue('amt-1', 10)">+</button>
+                </div>
+            </div>
+            <button id="btn-p1" class="action-green-btn state-active-bet" onclick="triggerBet(1)">BET<br><span style="font-size:11px;font-weight:normal;">100.00 INR</span></button>
+            <div class="auto-row">
+                <span>Auto Bet <input type="checkbox" id="auto-bet-1"></span>
+                <div class="auto-toggle">
+                    <span>Auto Cash Out</span>
+                    <input type="number" id="auto-val-1" class="auto-input" value="2.00" step="0.1">
+                </div>
+            </div>
         </div>
-    </div>
 
-    <!-- बेटिंग टूल्स -->
-    <div class="bet-box">
-        <div class="bet-input-section">
-            <input type="number" id="bet-amt" value="10" min="10">
+        <!-- दूसरा बेट पैनल -->
+        <div class="bet-card">
+            <div class="input-row">
+                <div class="number-selector">
+                    <button class="num-btn" onclick="adjustValue('amt-2', -10)">-</button>
+                    <input type="number" id="amt-2" class="main-input" value="200">
+                    <button class="num-btn" onclick="adjustValue('amt-2', 10)">+</button>
+                </div>
+            </div>
+            <button id="btn-p2" class="action-green-btn state-active-bet" onclick="triggerBet(2)">BET<br><span style="font-size:11px;font-weight:normal;">200.00 INR</span></button>
+            <div class="auto-row">
+                <span>Auto Bet <input type="checkbox" id="auto-bet-2"></span>
+                <div class="auto-toggle">
+                    <span>Auto Cash Out</span>
+                    <input type="number" id="auto-val-2" class="auto-input" value="1.50" step="0.1">
+                </div>
+            </div>
         </div>
-        <button id="action-btn" class="bet-button state-bet" onclick="placeBet()">BET</button>
+
     </div>
 
     <script>
-        // ⚠️ यहाँ अपने Render लाइव सर्वर का लिंक डाला है
-    
-        const SERVER_URL = "https://onrender.com";
-
+        const SERVER_URL = "https://onrender.com"; 
         const socket = io(SERVER_URL);
 
-        let myBalance = 5000.00;
-        let myCurrentBet = 0;
-        let hasBetThisRound = false;
-        let isLiveRunning = false;
-        let lastMult = 1.00;
+        let userBalance = 5000.00;
+        let activeBets = { 1: { amt: 0, status: 'none' }, 2: { amt: 0, status: 'none' } };
+        let isRoundLive = false;
+        let lastKnownMult = 1.00;
 
-        // सर्वर से लाइव डेटा प्राप्त करना
+        function adjustValue(id, val) {
+            let input = document.getElementById(id);
+            let current = parseFloat(input.value) || 0;
+            if (current + val >= 10) {
+                input.value = current + val;
+                let panelNum = id.split('-')[1];
+                updateButtonText(panelNum);
+            }
+        }
+
+        function updateButtonText(num) {
+            let btn = document.getElementById('btn-p' + num);
+            let amt = document.getElementById('amt-' + num).value;
+            if (activeBets[num].status === 'none') {
+                btn.innerHTML = `BET<br><span style="font-size:11px;font-weight:normal;">${parseFloat(amt).toFixed(2)} INR</span>`;
+            }
+        }
+
+        document.getElementById('amt-1').addEventListener('input', () => updateButtonText(1));
+        document.getElementById('amt-2').addEventListener('input', () => updateButtonText(2));
+
+        // लाइव सिग्नल सुनना
         socket.on('live_multiplier', (data) => {
-            isLiveRunning = true;
-            lastMult = parseFloat(data.multiplier);
+            isRoundLive = true;
+            lastKnownMult = parseFloat(data.multiplier);
             
-            let displayElement = document.getElementById('display-mult');
-            displayElement.innerText = data.multiplier + "x";
-            displayElement.style.color = "#22c55e"; // लाइव काउंटिंग हरा दिखेगा
+            let screen = document.getElementById('mult-screen');
+            screen.innerText = data.multiplier + "x";
+            screen.style.color = "#2de35d"; 
 
-            let plane = document.getElementById('plane-wrapper');
+            let plane = document.getElementById('red-plane-wrapper');
             plane.style.display = "block";
-            
-            // लाइव हवाई जहाज का ऊपर की तरफ उड़ना
-            let progress = (lastMult - 1) * 35;
-            plane.style.transform = `translate(${progress * 1.3}px, -${progress}px)`;
+            let progress = (lastKnownMult - 1) * 35;
+            plane.style.transform = `translate(${progress * 1.3}px, -${progress}px) scaleX(-1)`;
 
-            // बटन स्टेट अपडेट करना
-            let btn = document.getElementById('action-btn');
-            if (hasBetThisRound) {
-                btn.className = "bet-button state-cashout";
-                btn.innerText = `CASH OUT\n₹${(myCurrentBet * lastMult).toFixed(2)}`;
-                btn.onclick = cashOutRound;
+            // दोनों पैनल्स के लिए लाइव कैश-आउट और ऑटो कैश-आउट चेक करना
+            for (let num of) {
+                if (activeBets[num].status === 'placed') {
+                    let btn = document.getElementById('btn-p' + num);
+                    let currentWin = activeBets[num].amt * lastKnownMult;
+                    btn.className = "action-green-btn state-cashout_orange";
+                    btn.innerHTML = `CASH OUT<br><span style="font-size:12px;">₹${currentWin.toFixed(2)}</span>`;
+
+                    // ऑटो कैश आउट लॉजिक
+                    let autoVal = parseFloat(document.getElementById('auto-val-' + num).value) || 0;
+                    if (autoVal > 1 && lastKnownMult >= autoVal) {
+                        executeCashOut(num);
+                    }
+                }
             }
         });
 
-        // प्लेन क्रैश होने पर
         socket.on('round_crashed', (data) => {
-            isLiveRunning = false;
-            let displayElement = document.getElementById('display-mult');
-            displayElement.innerText = "FLEW AWAY \n" + data.crashPoint + "x";
-            displayElement.style.color = "#ef4444"; // क्रैश होने पर लाल रंग
+            isRoundLive = false;
+            let screen = document.getElementById('mult-screen');
+            screen.innerText = "FLEW AWAY\n" + data.crashPoint + "x";
+            screen.style.color = "#cb011a"; 
 
-            document.getElementById('plane-wrapper').style.display = "none";
-            
-            // इतिहास बार में जोड़ना
-            addHistoryPearl(data.crashPoint);
+            document.getElementById('red-plane-wrapper').style.display = "none";
 
-            // राउंड रीसेट करना
-            hasBetThisRound = false;
-            myCurrentBet = 0;
-            
-            let btn = document.getElementById('action-btn');
-            btn.className = "bet-button state-bet";
-            btn.innerText = "BET";
-            btn.disabled = false;
-            btn.onclick = placeBet;
+            // राउंड रीसेट
+            for (let num of) {
+                activeBets[num].status = 'none';
+                let btn = document.getElementById('btn-p' + num);
+                btn.className = "action-green-btn state-active-bet";
+                btn.disabled = false;
+                updateButtonText(num);
+            }
         });
 
-        function placeBet() {
-            if (isLiveRunning) return alert("अगले राउंड का इंतजार करें!");
-            let amt = parseFloat(document.getElementById('bet-amt').value);
-            if (amt > myBalance || amt <= 0) return alert("सही अमाउंट डालें!");
+        function triggerBet(num) {
+            if (activeBets[num].status === 'placed') {
+                executeCashOut(num);
+                return;
+            }
 
-            myBalance -= amt;
-            myCurrentBet = amt;
-            hasBetThisRound = true;
-            document.getElementById('wallet').innerText = myBalance.toFixed(2);
-
-            let btn = document.getElementById('action-btn');
-            btn.className = "bet-button state-waiting";
-            btn.innerText = "WAITING FOR ROUND...";
-            btn.disabled = true;
-        }
-
-        function cashOutRound() {
-            if (!hasBetThisRound || !isLiveRunning) return;
+            if (isRoundLive) return alert("कृपया अगले राउंड का इंतजार करें!");
             
-            let win = myCurrentBet * lastMult;
-            myBalance += win;
-            document.getElementById('wallet').innerText = myBalance.toFixed(2);
-            alert("जीत गए! आपको मिले: ₹" + win.toFixed(2));
-            
-            hasBetThisRound = false;
-            myCurrentBet = 0;
-            
-            let btn = document.getElementById('action-btn');
-            btn.className = "bet-button state-waiting";
-            btn.innerText = "NEXT ROUND WAITING...";
-            btn.disabled = true;
-        }
+            let amt = parseFloat(document.getElementById('amt-' + num).value);
+            if (amt > userBalance || amt <= 0) return alert("बैलेंस कम है या सही अमाउंट नहीं है!");
 
-        function addHistoryPearl(val) {
-            let hist = document.getElementById('history');
-            let pearl = document.createElement('span');
-            pearl.className = "history-pearl " + (val >= 10 ? "pearl-high" : "");
-            pearl.innerText = val + "x";
-            hist.insertBefore(pearl, hist.firstChild);
-        }
-    </script>
-</body>
-</html>
+            userBalance -= amt;
+            activeBets[num].amt = amt;
+            activeBets[num].status = 'placed';
+            document.getElementById('total-wallet').innerText = userBalance.toFixed(2);
+
